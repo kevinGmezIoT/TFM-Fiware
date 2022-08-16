@@ -3,14 +3,14 @@
 #include <WiFiClient.h>
 #include <WiFiManager.h>
 #include <ArduinoJson.h>
-#include <TinyUPnP.h>
+//#include <TinyUPnP.h>
   
 //Upnp
 #define LISTEN_PORT 6001  // http://<IP>:<LISTEN_PORT>/?name=<your string>
-#define LEASE_DURATION 0  // seconds
-#define FRIENDLY_NAME "TEST_UPNP"  // this name will appear in your router port forwarding section
+//#define LEASE_DURATION 0  // seconds
+//#define FRIENDLY_NAME "TEST_UPNP"  // this name will appear in your router port forwarding section
 
-TinyUPnP tinyUPnP(20000);  // -1 means blocking, preferably, use a timeout value (ms)
+//TinyUPnP tinyUPnP(20000);  // -1 means blocking, preferably, use a timeout value (ms)
 WebServer server(LISTEN_PORT);
 
 // JSON data buffer
@@ -46,22 +46,7 @@ void connectToWiFi() {
   }
 }
 
-void config_upnp(){
-  boolean portMappingAdded = false;
-  tinyUPnP.addPortMappingConfig(WiFi.localIP(), LISTEN_PORT, RULE_PROTOCOL_TCP, LEASE_DURATION, FRIENDLY_NAME);
-  while (!portMappingAdded) {
-    portMappingAdded = tinyUPnP.commitPortMappings();
-    Serial.println("");
-  
-    if (!portMappingAdded) {
-      // for debugging, you can see this in your router too under forwarding or UPnP
-      tinyUPnP.printAllPortMappings();
-      Serial.println(F("This was printed because adding the required port mapping failed"));
-      delay(30000);  // 30 seconds before trying again
-    }
-  }
-  Serial.println("UPnP done");
-}
+
 
 void setup_routing() {
   server.on("/fan", HTTP_POST, handlePost); 
@@ -98,12 +83,12 @@ void setup() {
   Serial.begin(115200);         
     
   connectToWiFi();  
-  config_upnp();
+  //config_upnp();
   setup_routing();   
 }    
        
 void loop() {    
-  tinyUPnP.updatePortMappings(600000);  // 10 minutes
+  //tinyUPnP.updatePortMappings(600000);  // 10 minutes
   server.handleClient();   
   delay(5);  
 }
