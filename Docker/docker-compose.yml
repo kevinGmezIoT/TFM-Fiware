@@ -4,6 +4,7 @@ services:
        image: mongo:4.4
        container_name: db-mongo
        hostname: mongo-db
+       restart: unless-stopped
        expose:
           - "27017"
        ports:
@@ -14,6 +15,20 @@ services:
           - mongo-db:/data
        command: --nojournal
 
+    postgres-db:
+       image: postgres
+       hostname: postgres-db
+       container_name: db-postgres
+       restart: unless-stopped
+       ports:
+          - "5432:5432"
+       environment:
+          - "POSTGRES_PASSWORD=2mJSR80R7e7"
+          - "POSTGRES_USER=postgres"
+          - "POSTGRES_DB=postgres"
+       volumes:
+          - postgres-db:/var/lib/postgresql/data
+
     orion:
        image: fiware/orion
        container_name: fiware-orion
@@ -21,6 +36,7 @@ services:
           org.fiware: 'tfm'
        depends_on:
          - mongo-db
+       restart: unless-stopped
        expose:
           - "1026"
        ports:
@@ -34,21 +50,26 @@ services:
         hostname: cygnus
         container_name: fiware-cygnus
         depends_on:
-          - mongo-db
+          - postgres-db
+        restart: unless-stopped
         networks:
           - default
         expose:
           - "5080" # API Port
-          - "5051" # Service Port
+          - "5055" # Service Port
         ports:
-          - "5051:5051" # localhost:5051
-          - "5080:5080" # localhost:5080
+          - "5055:5055"
+          - "5080:5080"
         environment:
-          - "CYGNUS_MONGO_SERVICE_PORT=5051" # Port that Cygnus listens on for operational reasons
-          - "CYGNUS_MONGO_HOSTS=mongo-db:27017" # Comma separated list of Mongo-DB servers which Cygnus will contact to persist historical context data
-          - "CYGNUS_SERVICE_PORT=5051"
-          - "CYGNUS_API_PORT=5080" # Port that Cygnus listens on for operational reasons
+          - "CYGNUS_POSTGRESQL_HOST=postgres-db" # Hostname of the PostgreSQL server used to persist historical context data
+          - "CYGNUS_POSTGRESQL_PORT=5432" # Port that the PostgreSQL server uses to listen to commands
+          - "CYGNUS_POSTGRESQL_USER=postgres" # Username for the PostgreSQL database user
+          - "CYGNUS_POSTGRESQL_PASS=2mJSR80R7e7" # Password for the PostgreSQL database user
+          - "CYGNUS_POSTGRESQL_ENABLE_CACHE=true" # Switch to enable caching within the PostgreSQL configuration
+          - "CYGNUS_POSTGRESQL_SERVICE_PORT=5055" # The port the agent.conf is configured for
           - "CYGNUS_LOG_LEVEL=DEBUG" # The logging level for Cygnus
+          - "CYGNUS_SERVICE_PORT=5055" # Notification Port that Cygnus listens to for Postgres subscriptions
+          - "CYGNUS_API_PORT=5080" # Port that Cygnus listens on for operational reasons
 
     # IoT-Agent is configured for the JSON Protocol
     iot-agent:
@@ -57,6 +78,7 @@ services:
         container_name: fiware-iot-agent
         depends_on:
           - mongo-db
+        restart: unless-stopped
         networks:
           - default
         expose:
@@ -84,6 +106,28 @@ services:
         healthcheck:
           interval: 5s
 
+    grafana:
+        image: grafana/grafana:8.4.1
+        hostname: grafana
+        expose:
+          - "3000"
+        ports:
+          - "3000:3000"
+        restart: unless-stopped
+        networks:
+          - default
+        environment:
+          - GF_INSTALL_PLUGINS=cloudspout-button-panel, vonage-status-panel
+          - GF_SMTP_ENABLED=true
+          - GF_SMTP_HOST=email-smtp.us-east-1.amazonaws.com:2587
+          - GF_SMTP_USER=AKIA5V7ZGRLYIRMT4O5C
+          - GF_SMTP_PASSWORD=BNt+HPnl5/UwmqhPRnoW5aKD1GD3Bd4HUIcIZh8ycLT8
+          - GF_SMTP_FROM_ADDRESS=auto-alerts@tfm-fiware.awsapps.com
+          - GF_SMTP_SKIP_VERIFY=true
+        volumes:
+          - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+          - grafana-data:/var/lib/grafana
+
 networks:
   default:
     labels:
@@ -94,3 +138,5 @@ networks:
 
 volumes:
   mongo-db: ~
+  postgres-db: ~
+  grafana-data:
