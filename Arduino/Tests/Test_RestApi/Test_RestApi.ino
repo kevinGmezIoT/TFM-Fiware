@@ -1,6 +1,7 @@
 #include <WiFi.h>
 #include <WebServer.h>
 #include <WiFiClient.h>
+#include <HTTPClient.h>
 #include <WiFiManager.h>
 #include <ArduinoJson.h>
 //#include <TinyUPnP.h>
@@ -12,6 +13,9 @@
 
 //TinyUPnP tinyUPnP(20000);  // -1 means blocking, preferably, use a timeout value (ms)
 WebServer server(LISTEN_PORT);
+
+//Send POST to update fan state
+const char* servidor="http://192.168.2.131:7896/iot/json?i=fan001&k=4jggokgpepnvsb2uv4s40d59ov";// -->Agregar
 
 // JSON data buffer
 StaticJsonDocument<250> jsonDocument;
@@ -69,14 +73,75 @@ void handlePost() {
   Serial.println(body);
   if (on_ == 1){
     Serial.println("Se enciende el ventilador");
+    update_on();
   }
   
   if (off_ == 1){
     Serial.println("Se apaga el ventilador");
+    update_off(); // -->Agregar
   }
   
   // Respond to the client
-  server.send(200, "application/json", body);
+  server.send(200, "application/json", body); // -->Agregar
+}
+
+// -->Agregar
+void update_on(){
+  String quote = "\"";
+  String mensaje="{" +quote +"s" +quote +":" + quote + "Encendido" + quote + "}";
+
+  HTTPClient http;
+  Serial.print("**PRUEBA DE ENVIO DE POST:\t");
+  Serial.println("");
+  // you’re connected now, so print out the data
+  Serial.println("Starting connection to server…");
+  WiFiClient client;
+  http.begin(client, servidor);
+  Serial.print("Enviando mensaje JSON: ");
+  // Specify content-type header
+  //http.addHeader("Accept", "application/json");
+  http.addHeader("Content-Type", "application/json");
+  //http.addHeader("Content-Length",longitud);
+
+  int  httpResponseCode2 = http.POST(mensaje);
+
+  Serial.print("HTTP Response code: ");
+  Serial.println(httpResponseCode2);
+  
+  String payload2 = http.getString();
+  
+  Serial.println(payload2);
+  Serial.println();
+  http.end();
+}
+
+void update_off(){
+  String quote = "\"";
+  String mensaje="{" +quote +"s" +quote +":" + quote + "Apagado" + quote + "}";
+
+  HTTPClient http;
+  Serial.print("**PRUEBA DE ENVIO DE POST:\t");
+  Serial.println("");
+  // you’re connected now, so print out the data
+  Serial.println("Starting connection to server…");
+  WiFiClient client;
+  http.begin(client, servidor);
+  Serial.print("Enviando mensaje JSON: ");
+  // Specify content-type header
+  //http.addHeader("Accept", "application/json");
+  http.addHeader("Content-Type", "application/json");
+  //http.addHeader("Content-Length",longitud);
+
+  int  httpResponseCode2 = http.POST(mensaje);
+
+  Serial.print("HTTP Response code: ");
+  Serial.println(httpResponseCode2);
+  
+  String payload2 = http.getString();
+  
+  Serial.println(payload2);
+  Serial.println();
+  http.end();
 }
 
 void setup() {     
